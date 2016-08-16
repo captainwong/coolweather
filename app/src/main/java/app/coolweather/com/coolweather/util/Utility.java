@@ -31,7 +31,7 @@ import app.coolweather.com.coolweather.model.Province;
 public class Utility {
     private static final String TAG ="Utility";
 
-    public synchronized static boolean handleCountriesResponse(CoolWeatherDB db, String response){
+    public static boolean handleCountriesResponse(CoolWeatherDB db, String response){
         LogUtil.d(TAG, "handleCountriesResponse");
         LogUtil.d(TAG, "response=" + response);
         if(!TextUtils.isEmpty(response)) {
@@ -61,7 +61,7 @@ public class Utility {
                     double lat = cityObj.getDouble("lat");
                     double lon = cityObj.getDouble("lon");
 
-                    if(countryName.equals("中国")) {
+                    if(countryName.equals(Country.CHINA)) {
                         String provinceName = cityObj.getString("prov");
 
                         if (provinceName.equals(Province.TYPE_MUNICIPALITY)
@@ -149,7 +149,7 @@ public class Utility {
                         db.saveForeignCity(city);
                     }
                 }
-
+                return true;
             }catch(JSONException e){
                 e.printStackTrace();
                 return false;

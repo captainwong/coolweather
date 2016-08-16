@@ -21,8 +21,10 @@ import java.util.List;
 
 import app.coolweather.com.coolweather.R;
 import app.coolweather.com.coolweather.db.CoolWeatherDB;
+import app.coolweather.com.coolweather.model.ChinaCity;
 import app.coolweather.com.coolweather.model.City;
 import app.coolweather.com.coolweather.model.Country;
+import app.coolweather.com.coolweather.model.ForeignCity;
 import app.coolweather.com.coolweather.model.Province;
 import app.coolweather.com.coolweather.util.HttpUtil;
 import app.coolweather.com.coolweather.util.LogUtil;
@@ -33,7 +35,7 @@ public class ChooseAreaActivity extends Activity {
     public static final int LEVEL_COUNTRY = 0;
     public static final int LEVEL_PROVINCE = 1;
     public static final int LEVEL_CITY = 2;
-    //public static final int LEVEL_COUNTY = 2;
+    public static final int LEVEL_FOREIGN_CITY = 3;
 
     public static final String COUNTRY = "country";
     public static final String PROVINCE = "province";
@@ -49,8 +51,8 @@ public class ChooseAreaActivity extends Activity {
 
     private List<Country> countries;
     private List<Province> provinces;
-    private List<City> cities;
-    //private List<County> counties;
+    private List<ChinaCity> cities;
+    private List<ForeignCity> foreignCities;
 
     private Country selectedCountry;
     private Province selectedProvince;
@@ -85,12 +87,17 @@ public class ChooseAreaActivity extends Activity {
                 if(currentLevel == LEVEL_COUNTRY) {
                     selectedCountry = countries.get(i);
                     LogUtil.d(TAG, "LEVEL_COUNTRY countryName=" + selectedCountry.getCountryName());
-                    queryProvinces();
+                    if(Country.CHINA.equals(selectedCountry.getCountryName())){
+                        queryProvinces();
+                    }else{
+                        queryForeignCities();
+                    }
+
                 }else if(currentLevel==LEVEL_PROVINCE){
                     selectedProvince=provinces.get(i);
                     LogUtil.d(TAG, "LEVEL_PROVINCE provinceName=" + selectedProvince.getProvinceName());
                     queryCities();
-                }else if(currentLevel == LEVEL_CITY){
+                }else if(currentLevel == LEVEL_CITY || currentLevel == LEVEL_FOREIGN_CITY){
                     String cityCode = cities.get(i).getCityCode();
                     Intent intent = new Intent(ChooseAreaActivity.this, WeatherActivity.class);
                     intent.putExtra("city_code", cityCode);
@@ -106,7 +113,7 @@ public class ChooseAreaActivity extends Activity {
     public void onBackPressed(){
         if(currentLevel == LEVEL_CITY) {
             queryProvinces();
-        }else if(currentLevel == LEVEL_PROVINCE){
+        }else if(currentLevel == LEVEL_PROVINCE || currentLevel == LEVEL_FOREIGN_CITY){
             queryCountries();
         }else{
             finish();
@@ -151,7 +158,7 @@ public class ChooseAreaActivity extends Activity {
     }
 
     private void queryCities(){
-        cities = db.loadCities(selectedProvince.getId());
+        cities = db.loadChinaCities(selectedProvince.getId());
         LogUtil.d(TAG, "queryCities, cities.size()=" + cities.size());
         if(cities.size() > 0){
             dataList.clear();
@@ -167,26 +174,27 @@ public class ChooseAreaActivity extends Activity {
         }
     }
 
-//    private void queryCounties(){
-//        counties = db.loadCounties(selectedCity.getId());
-//        if(counties.size() > 0){
-//            dataList.clear();
-//            for(County county : counties){
-//                dataList.add(county.getCountyName());
-//            }
-//            adapter.notifyDataSetChanged();
-//            listView.setSelection(0);
-//            textView.setText(selectedCity.getCityName());
-//            currentLevel = LEVEL_COUNTY;
-//        }else{
-//            queryFromServer(selectedCity.getCityCode(), COUNTY);
-//        }
-//    }
+    private void queryForeignCities(){
+        foreignCities = db.loadForeignCities(selectedCountry.getId());
+        LogUtil.d(TAG, "queryForeignCities, foreignCities.size()=" + foreignCities.size());
+        if(foreignCities.size() > 0){
+            dataList.clear();
+            for(ForeignCity city : foreignCities){
+                dataList.add(city.getCityName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            textView.setText(selectedCountry.getCountryName());
+            currentLevel = LEVEL_FOREIGN_CITY;
+        }else{
+            queryFromServer();
+        }
+    }
 
     private void queryFromServer(){
         LogUtil.d(TAG, "queryFromServer");
-        String address = "http://www.weather.com.cn/data/list3/city.xml";
-
+        //String address = "https://api.heweather.com/x3/citylist?search=allworld&key=9eb909aa67324124a43720e1922e8c06";
+        String address = "https://api.heweather.com/x3/citylist?search=allchina&key=9eb909aa67324124a43720e1922e8c06";
         LogUtil.d(TAG, "address=" + address);
 
         showProgressDialog();
@@ -195,14 +203,7 @@ public class ChooseAreaActivity extends Activity {
             @Override
             public void onFinish (String response) {
                 LogUtil.d(TAG, "HttpCallbackListener.onFinish");
-                boolean result = false;
-                if(PROVINCE.equals(type)){
-                    result = Utility.handleProvincesResponse(db, response);
-                }else if(CITY.equals(type)){
-                    result = Utility.handleCitiesResponse(db, response, selectedProvince.getId());
-                }else if(COUNTY.equals(type)){
-                    result = Utility.handleCountiesResponse(db, response, selectedCity.getId());
-                }
+                boolean result = Utility.handleCountriesResponse(db, response);
 
                 LogUtil.d(TAG, "result=" + result);
 
@@ -211,13 +212,7 @@ public class ChooseAreaActivity extends Activity {
                         @Override
                         public void run () {
                             closeProgressDialog();
-                            if("province".equals(type)){
-                                queryProvinces();
-                            }else if("city".equals(type)){
-                                queryCities();
-                            }else if("county".equals(type)){
-                                queryCounties();
-                            }
+                            queryCountries();
                         }
                     });
                 }

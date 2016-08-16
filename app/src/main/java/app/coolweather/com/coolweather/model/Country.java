@@ -4,6 +4,9 @@ package app.coolweather.com.coolweather.model;
  * Created by Jack on 2016/8/15.
  */
 public class Country {
+
+    public static final String CHINA = "中国";
+
     private long id;
     private String countryName;
 

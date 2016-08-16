@@ -54,13 +54,13 @@ public class CoolWeatherOpenHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion){
         switch (oldVersion){
             case 1:
+                db.execSQL("drop table if exists Country");
+                db.execSQL("drop table if exists Province");
+                db.execSQL("drop table if exists City");
                 db.execSQL("drop table if exists County");
                 db.execSQL(CREATE_COUNTRY);
-                db.execSQL("alter table Province delete column province_code");
-                db.execSQL("alter table Province add column province_type text");
-                db.execSQL("alter table Province add column latitude real");
-                db.execSQL("alter table Province add column longitude real");
-                db.execSQL("alter table Province add column country_id integer");
+                db.execSQL(CREATE_PROVINCE);
+                db.execSQL(CREATE_CITY);
                 db.execSQL(CREATE_FOREIGN_CITY);
             case 2:
 
