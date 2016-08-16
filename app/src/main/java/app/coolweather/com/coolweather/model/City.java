@@ -4,16 +4,18 @@ package app.coolweather.com.coolweather.model;
  * Created by Jack on 2016/8/14.
  */
 public class City {
-    private int id;
-    private String cityName;
-    private String cityCode;
-    private int provinceId;
+    protected long id;
+    protected String cityName;
+    protected String cityCode;
+    protected double latitude;
+    protected double longitude;
 
-    public int getId() {
+
+    public long getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(long id) {
         this.id = id;
     }
 
@@ -33,16 +35,21 @@ public class City {
         this.cityCode = cityCode;
     }
 
-    public int getProvinceId() {
-        return provinceId;
+    public double getLatitude () {
+        return latitude;
     }
 
-    public void setProvinceId(int provinceId) {
-        this.provinceId = provinceId;
+    public void setLatitude (double latitude) {
+        this.latitude = latitude;
     }
 
-    @Override
-    public String toString () {
-        return "City: id=" + id + ", code=" + cityCode + ", name=" + cityName + ", provinceId=" + provinceId;
+    public double getLongitude () {
+        return longitude;
     }
+
+    public void setLongitude (double longitude) {
+        this.longitude = longitude;
+    }
+
+
 }

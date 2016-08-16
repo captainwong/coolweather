@@ -2,8 +2,11 @@ package app.coolweather.com.coolweather.activity;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.nfc.Tag;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompatSideChannelService;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
@@ -19,7 +22,7 @@ import java.util.List;
 import app.coolweather.com.coolweather.R;
 import app.coolweather.com.coolweather.db.CoolWeatherDB;
 import app.coolweather.com.coolweather.model.City;
-import app.coolweather.com.coolweather.model.County;
+import app.coolweather.com.coolweather.model.Country;
 import app.coolweather.com.coolweather.model.Province;
 import app.coolweather.com.coolweather.util.HttpUtil;
 import app.coolweather.com.coolweather.util.LogUtil;
@@ -27,13 +30,15 @@ import app.coolweather.com.coolweather.util.Utility;
 
 public class ChooseAreaActivity extends Activity {
 
-    public static final int LEVEL_PROVINCE = 0;
-    public static final int LEVEL_CITY = 1;
-    public static final int LEVEL_COUNTY = 2;
+    public static final int LEVEL_COUNTRY = 0;
+    public static final int LEVEL_PROVINCE = 1;
+    public static final int LEVEL_CITY = 2;
+    //public static final int LEVEL_COUNTY = 2;
 
+    public static final String COUNTRY = "country";
     public static final String PROVINCE = "province";
     public static final String CITY = "city";
-    public static final String COUNTY = "county";
+    //public static final String COUNTY = "county";
 
     private ProgressDialog progressDialog;
     private TextView textView;
@@ -42,12 +47,14 @@ public class ChooseAreaActivity extends Activity {
     private CoolWeatherDB db;
     private List<String> dataList = new ArrayList<>();
 
+    private List<Country> countries;
     private List<Province> provinces;
     private List<City> cities;
-    private List<County> counties;
+    //private List<County> counties;
 
+    private Country selectedCountry;
     private Province selectedProvince;
-    private City selectedCity;
+    //private City selectedCity;
 
     private int currentLevel;
     private static final String TAG= "ChooseAreaActivity";
@@ -55,6 +62,15 @@ public class ChooseAreaActivity extends Activity {
     @Override
     protected void onCreate (Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        if(sharedPreferences.getBoolean("city_selected", false)){
+            Intent intent = new Intent(this, WeatherActivity.class);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_choose_area);
         listView = (ListView)findViewById(R.id.list_view);
@@ -66,34 +82,59 @@ public class ChooseAreaActivity extends Activity {
             @Override
             public void onItemClick (AdapterView<?> adapterView, View view, int i, long l) {
                 LogUtil.d(TAG, "onItemClick index=" + i);
-                if(currentLevel==LEVEL_PROVINCE){
+                if(currentLevel == LEVEL_COUNTRY) {
+                    selectedCountry = countries.get(i);
+                    LogUtil.d(TAG, "LEVEL_COUNTRY countryName=" + selectedCountry.getCountryName());
+                    queryProvinces();
+                }else if(currentLevel==LEVEL_PROVINCE){
                     selectedProvince=provinces.get(i);
                     LogUtil.d(TAG, "LEVEL_PROVINCE provinceName=" + selectedProvince.getProvinceName());
                     queryCities();
                 }else if(currentLevel == LEVEL_CITY){
-                    selectedCity = cities.get(i);
-                    LogUtil.d(TAG, "LEVEL_CITY cityName=" + selectedCity.getCityName());
-                    queryCounties();
+                    String cityCode = cities.get(i).getCityCode();
+                    Intent intent = new Intent(ChooseAreaActivity.this, WeatherActivity.class);
+                    intent.putExtra("city_code", cityCode);
+                    startActivity(intent);
+                    finish();
                 }
             }
         });
-        queryProvinces();
+        queryCountries();
     }
 
     @Override
     public void onBackPressed(){
-        if(currentLevel == LEVEL_COUNTY){
-            queryCities();
-        }else if(currentLevel == LEVEL_CITY){
+        if(currentLevel == LEVEL_CITY) {
             queryProvinces();
+        }else if(currentLevel == LEVEL_PROVINCE){
+            queryCountries();
         }else{
             finish();
         }
     }
 
+    private void queryCountries(){
+        LogUtil.d(TAG, "queryCountries");
+        countries = db.loadCountries();
+        LogUtil.d(TAG, "countries.size() is " + countries.size());
+
+        if(countries.size() > 0){
+            dataList.clear();
+            for(Country country : countries){
+                dataList.add(country.getCountryName());
+            }
+            adapter.notifyDataSetChanged();
+            listView.setSelection(0);
+            textView.setText("国家");
+            currentLevel = LEVEL_COUNTRY;
+        }else{
+            queryFromServer();
+        }
+    }
+
     private void queryProvinces(){
         LogUtil.d(TAG, "queryProvinces");
-        provinces = db.loadProvinces();
+        provinces = db.loadProvinces(selectedCountry.getId());
         LogUtil.d(TAG, "provinces.size() is " + provinces.size());
         if(provinces.size() > 0){
             dataList.clear();
@@ -102,10 +143,10 @@ public class ChooseAreaActivity extends Activity {
             }
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
-            textView.setText("中国");
+            textView.setText(selectedCountry.getCountryName());
             currentLevel = LEVEL_PROVINCE;
         }else{
-            queryFromServer(null, PROVINCE);
+            queryFromServer();
         }
     }
 
@@ -122,34 +163,29 @@ public class ChooseAreaActivity extends Activity {
             textView.setText(selectedProvince.getProvinceName());
             currentLevel = LEVEL_CITY;
         }else{
-            queryFromServer(selectedProvince.getProvinceCode(), CITY);
+            queryFromServer();
         }
     }
 
-    private void queryCounties(){
-        counties = db.loadCounties(selectedCity.getId());
-        if(counties.size() > 0){
-            dataList.clear();
-            for(County county : counties){
-                dataList.add(county.getCountyName());
-            }
-            adapter.notifyDataSetChanged();
-            listView.setSelection(0);
-            textView.setText(selectedCity.getCityName());
-            currentLevel = LEVEL_COUNTY;
-        }else{
-            queryFromServer(selectedCity.getCityCode(), COUNTY);
-        }
-    }
+//    private void queryCounties(){
+//        counties = db.loadCounties(selectedCity.getId());
+//        if(counties.size() > 0){
+//            dataList.clear();
+//            for(County county : counties){
+//                dataList.add(county.getCountyName());
+//            }
+//            adapter.notifyDataSetChanged();
+//            listView.setSelection(0);
+//            textView.setText(selectedCity.getCityName());
+//            currentLevel = LEVEL_COUNTY;
+//        }else{
+//            queryFromServer(selectedCity.getCityCode(), COUNTY);
+//        }
+//    }
 
-    private void queryFromServer(final String code, final String type){
-        LogUtil.d(TAG, "queryFromServer code=" + code + ",type=" + type);
-        String address;
-        if(!TextUtils.isEmpty(code)){
-            address = "http://www.weather.com.cn/data/list3/city" + code + ".xml";
-        }else{
-            address = "http://www.weather.com.cn/data/list3/city.xml";
-        }
+    private void queryFromServer(){
+        LogUtil.d(TAG, "queryFromServer");
+        String address = "http://www.weather.com.cn/data/list3/city.xml";
 
         LogUtil.d(TAG, "address=" + address);
 
