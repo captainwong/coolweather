@@ -37,7 +37,7 @@ public class AutoUpdateService extends Service {
             }
         }).start();
 
-        
+
         AlarmManager alarmManager = (AlarmManager)getSystemService(ALARM_SERVICE);
         int gap = 1 * 60 * 60 * 1000;
         long triggerAtTime = SystemClock.elapsedRealtime() + gap;
