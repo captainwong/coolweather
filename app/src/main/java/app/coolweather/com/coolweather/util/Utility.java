@@ -232,12 +232,14 @@ public class Utility {
 
     public static void handleWeatherResponse(Context context, String response){
         try{
+            LogUtil.i(TAG, "handleWeatherResponse");
             JSONObject jsonObject = new JSONObject(response);
             JSONObject heWeatherData = jsonObject.getJSONArray("HeWeather data service 3.0").getJSONObject(0);
             JSONObject heDataBasic = heWeatherData.getJSONObject("basic");
             JSONObject heNow = heWeatherData.getJSONObject("now");
             String cityName = heDataBasic.getString("city");
             String cityCode = heDataBasic.getString("id");
+            LogUtil.i(TAG, "city_code=" + cityCode);
             String tmp = heNow.getString("tmp");
             String weatherText = heNow.getJSONObject("cond").getString("txt");
 
@@ -248,16 +250,16 @@ public class Utility {
         }
     }
 
-    public static void saveWeatherInfo(Context context, String cityName, String weatherCode,
+    public static void saveWeatherInfo(Context context, String cityName, String cityCode,
                                        String temp, String weatherText){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日", Locale.CHINA);
         SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
         editor.putBoolean("city_selected", true);
         editor.putString("city_name", cityName);
-        editor.putString("weather_code", weatherCode);
+        editor.putString("city_code", cityCode);
         editor.putString("temp", temp);
         editor.putString("weather_desp", weatherText);
         editor.putString("current_date", sdf.format(new Date()));
-        editor.commit();
+        editor.apply();
     }
 }

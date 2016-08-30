@@ -15,6 +15,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import app.coolweather.com.coolweather.R;
+import app.coolweather.com.coolweather.service.AutoUpdateService;
 import app.coolweather.com.coolweather.util.HttpUtil;
 import app.coolweather.com.coolweather.util.LogUtil;
 import app.coolweather.com.coolweather.util.Utility;
@@ -74,9 +75,10 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
             case R.id.refresh_weather:
                 publishText.setText("同步中...");
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-                String weatherCode = prefs.getString("weather_code", "");
-                if(!TextUtils.isEmpty(weatherCode)){
-                    queryWeatherInfo(weatherCode);
+                String city_code = prefs.getString("city_code", "");
+                LogUtil.i(TAG, "city_code=" + city_code);
+                if(!TextUtils.isEmpty(city_code)){
+                    queryWeatherInfo(city_code);
                 }
                 break;
 
@@ -142,5 +144,8 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
         weatherInfoLayout.setVisibility(View.VISIBLE);
         cityNameText.setVisibility(View.VISIBLE);
 
+
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
 }
