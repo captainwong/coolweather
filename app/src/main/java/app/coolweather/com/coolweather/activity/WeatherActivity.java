@@ -27,8 +27,7 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
     private TextView cityNameText;
     private TextView publishText;
     private TextView weatherDespText;
-    private TextView temp1Text;
-    private TextView temp2Text;
+    private TextView tempText;
     private TextView currentDateText;
     private Button switchCity;
     private Button refreshWeather;
@@ -43,18 +42,17 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
         cityNameText = (TextView)findViewById(R.id.city_name);
         publishText = (TextView)findViewById(R.id.publish_text);
         weatherDespText = (TextView)findViewById(R.id.weather_desp);
-        temp1Text = (TextView)findViewById(R.id.temp1);
-        temp2Text = (TextView)findViewById(R.id.temp2);
+        tempText = (TextView)findViewById(R.id.temp);
         currentDateText = (TextView)findViewById(R.id.current_date);
         switchCity = (Button)findViewById(R.id.switch_city);
         refreshWeather = (Button)findViewById(R.id.refresh_weather);
 
-        String countyCode = getIntent().getStringExtra("county_code");
-        if(!TextUtils.isEmpty(countyCode)){
+        String city_code = getIntent().getStringExtra("city_code");
+        if(!TextUtils.isEmpty(city_code)){
             publishText.setText("同步中...");
             weatherInfoLayout.setVisibility(View.INVISIBLE);
             cityNameText.setVisibility(View.INVISIBLE);
-            queryWeatherCode(countyCode);
+            queryWeatherInfo(city_code);
         }else{
             showWeather();
         }
@@ -87,33 +85,22 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
         }
     }
 
-    private void queryWeatherCode(String countyCode){
-        LogUtil.d(TAG, "queryWeatherCode countyCode=" + countyCode);
-        String address = "http://www.weather.com.cn/data/list3/city" + countyCode + ".xml";
-        queryFromServer(address, "countyCode");
+
+    private void queryWeatherInfo(String city_code){
+        LogUtil.d(TAG, "queryWeatherInfo city_code=" + city_code);
+        String address = "https://api.heweather.com/x3/weather?cityid=" + city_code
+                + "&key=9eb909aa67324124a43720e1922e8c06";
+        queryFromServer(address);
     }
 
-    private void queryWeatherInfo(String weatherCode){
-        LogUtil.d(TAG, "queryWeatherInfo weatherCode=" + weatherCode);
-        String address = "http://www.weather.com.cn/data/cityinfo/" + weatherCode + ".html";
-        queryFromServer(address, "weatherCode");
-    }
-
-    private void queryFromServer(final String address, final String type){
-        LogUtil.d(TAG, "queryFromServer address=" + address + ", type=" + type);
+    private void queryFromServer(final String address){
+        LogUtil.d(TAG, "queryFromServer address=" + address);
         HttpUtil.sendHttpRequest(address, new HttpUtil.HttpCallbackListener() {
             @Override
             public void onFinish (String response) {
-                LogUtil.d(TAG, "onFinish type=" + type + ", response=" + response);
-                if("countyCode".equals(type)){
-                    if(!TextUtils.isEmpty(response)){
-                        String[] a = response.split("\\|");
-                        if(a != null && a.length == 2){
-                            String weatherCode = a[1];
-                            queryWeatherInfo(weatherCode);
-                        }
-                    }
-                }else if("weatherCode".equals(type)){
+                LogUtil.d(TAG, "onFinish " + ", response=" + response);
+
+                if(!TextUtils.isEmpty(response)){
                     Utility.handleWeatherResponse(WeatherActivity.this, response);
                     runOnUiThread(new Runnable() {
                         @Override
@@ -122,6 +109,7 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
                         }
                     });
                 }
+
             }
 
             @Override
@@ -141,13 +129,13 @@ public class WeatherActivity extends Activity implements View.OnClickListener{
         LogUtil.d(TAG, "showWeather");
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         cityNameText.setText(sharedPreferences.getString("city_name", ""));
-        temp1Text.setText(sharedPreferences.getString("temp1", ""));
-        temp2Text.setText(sharedPreferences.getString("temp2", ""));
+        tempText.setText(sharedPreferences.getString("temp", "") + "℃");
         weatherDespText.setText(sharedPreferences.getString("weather_desp", ""));
 
         Resources res = getResources();
         String publishTime = String.format(res.getString(R.string.today_publish),
-                sharedPreferences.getString("publish_time", ""));
+                //sharedPreferences.getString("publish_time", ""));
+                sharedPreferences.getString("current_date", ""));
         publishText.setText(publishTime);
 
         currentDateText.setText(sharedPreferences.getString("current_date", ""));

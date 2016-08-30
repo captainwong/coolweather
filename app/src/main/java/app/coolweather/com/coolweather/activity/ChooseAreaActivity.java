@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.app.NotificationCompatSideChannelService;
-import android.text.TextUtils;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
@@ -61,12 +59,16 @@ public class ChooseAreaActivity extends Activity {
     private int currentLevel;
     private static final String TAG= "ChooseAreaActivity";
 
+    private boolean isFromWeatherActivity;
+
     @Override
     protected void onCreate (Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        isFromWeatherActivity = getIntent().getBooleanExtra("from_weather_activity", false);
+
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        if(sharedPreferences.getBoolean("city_selected", false)){
+        if(!isFromWeatherActivity && sharedPreferences.getBoolean("city_selected", false)){
             Intent intent = new Intent(this, WeatherActivity.class);
             startActivity(intent);
             finish();
@@ -115,7 +117,10 @@ public class ChooseAreaActivity extends Activity {
             queryProvinces();
         }else if(currentLevel == LEVEL_PROVINCE || currentLevel == LEVEL_FOREIGN_CITY){
             queryCountries();
-        }else{
+        } else if(isFromWeatherActivity) {
+            Intent intent = new Intent(this, WeatherActivity.class);
+            startActivity(intent);
+        } else {
             finish();
         }
     }

@@ -8,8 +8,6 @@ import android.text.TextUtils;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 
 import org.json.JSONArray;
@@ -20,7 +18,6 @@ import org.json.JSONObject;
 
 import app.coolweather.com.coolweather.db.CoolWeatherDB;
 import app.coolweather.com.coolweather.model.ChinaCity;
-import app.coolweather.com.coolweather.model.City;
 import app.coolweather.com.coolweather.model.Country;
 import app.coolweather.com.coolweather.model.ForeignCity;
 import app.coolweather.com.coolweather.model.Province;
@@ -52,6 +49,10 @@ public class Utility {
                 // country name, city code, foreign city
                 HashMap<String, HashMap<String, ForeignCity>> foreignCountryCities = new HashMap<>();
 
+                //
+                String prevMunicipality = "";
+                String prevSpecialAdmRegion = "";
+
                 JSONArray city_info = jsonObject.getJSONArray("city_info");
                 for(int i = 0; i < city_info.length(); i++){
                     JSONObject cityObj = city_info.getJSONObject(i);
@@ -64,14 +65,23 @@ public class Utility {
                     if(countryName.equals(Country.CHINA)) {
                         String provinceName = cityObj.getString("prov");
 
-                        if (provinceName.equals(Province.TYPE_MUNICIPALITY)
-                                && Province.municipalities.contains(cityName)) {
-                            provinceName = cityName;
+                        if (provinceName.equals(Province.TYPE_MUNICIPALITY)) {
+                            if(Province.municipalities.contains(cityName)){
+                                provinceName = cityName;
+                                prevMunicipality = cityName;
+                            }else{
+                                provinceName = prevMunicipality;
+                            }
+
                         }
 
-                        if (provinceName.equals(Province.TYPE_SPECIAL_ADMINISTRATIVE_REGION)
-                                && Province.specialAdministrativeRegions.contains(cityName)) {
-                            provinceName = cityName;
+                        if (provinceName.equals(Province.TYPE_SPECIAL_ADMINISTRATIVE_REGION)) {
+                            if(Province.specialAdministrativeRegions.contains(cityName)) {
+                                provinceName = cityName;
+                                prevSpecialAdmRegion = cityName;
+                            }else{
+                                provinceName = prevSpecialAdmRegion;
+                            }
                         }
 
                         if (!chinaCountryProvinces.containsKey(countryName)) {
@@ -223,16 +233,15 @@ public class Utility {
     public static void handleWeatherResponse(Context context, String response){
         try{
             JSONObject jsonObject = new JSONObject(response);
-            JSONObject weatherInfo = jsonObject.getJSONObject("weatherinfo");
-            String cityName = weatherInfo.getString("city");
-            String weatherCode = weatherInfo.getString("cityid");
-            String temp1 = weatherInfo.getString("temp1");
-            String temp2 = weatherInfo.getString("temp2");
-            String weatherDesp = weatherInfo.getString("weather");
-            String publishTime = weatherInfo.getString("ptime");
+            JSONObject heWeatherData = jsonObject.getJSONArray("HeWeather data service 3.0").getJSONObject(0);
+            JSONObject heDataBasic = heWeatherData.getJSONObject("basic");
+            JSONObject heNow = heWeatherData.getJSONObject("now");
+            String cityName = heDataBasic.getString("city");
+            String cityCode = heDataBasic.getString("id");
+            String tmp = heNow.getString("tmp");
+            String weatherText = heNow.getJSONObject("cond").getString("txt");
 
-            saveWeatherInfo(context, cityName, weatherCode, temp1,  temp2,
-                    weatherDesp, publishTime);
+            saveWeatherInfo(context, cityName, cityCode, tmp, weatherText);
 
         }catch (JSONException e){
             e.printStackTrace();
@@ -240,17 +249,14 @@ public class Utility {
     }
 
     public static void saveWeatherInfo(Context context, String cityName, String weatherCode,
-                                       String temp1, String temp2, String weatherDesp,
-                                       String publishTime){
+                                       String temp, String weatherText){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy年M月d日", Locale.CHINA);
         SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(context).edit();
         editor.putBoolean("city_selected", true);
         editor.putString("city_name", cityName);
         editor.putString("weather_code", weatherCode);
-        editor.putString("temp1", temp1);
-        editor.putString("temp2", temp2);
-        editor.putString("weather_desp", weatherDesp);
-        editor.putString("publish_time", publishTime);
+        editor.putString("temp", temp);
+        editor.putString("weather_desp", weatherText);
         editor.putString("current_date", sdf.format(new Date()));
         editor.commit();
     }
